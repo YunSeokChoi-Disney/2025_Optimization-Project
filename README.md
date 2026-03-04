@@ -13,3 +13,5 @@
 -Greedy Algorithm & LP Relaxation: Compared the optimal solutions with heuristic approaches (Greedy) and Linear Programming relaxation.
 
 *Outcome: Successfully verified the optimal Knapsack strategy and conducted a cost comparison across different algorithms to analyze time complexity and accuracy.
+
+*Note that the files related to Project 1(PJ1_Problem(4),(5),(6)) are not relevant to this Project 2 branch. Please refer to the documentation about Project 2 for the core implementation of optimization algorithms

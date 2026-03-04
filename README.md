@@ -1,0 +1,15 @@
+**Project 2:Combinatorial Optimization - The Knapsack Problem**
+
+*Focus: Dynamic Programming and Branch & Bound
+
+*Objective: To solve the 0/1 Knapsack Problem, a classic combinatorial optimization problem, using multiple algorithmic strategies.
+
+*Key Algorithms:
+
+-Dynamic Programming (DP): Implemented a DP-based approach to find the exact optimal cost and the specific strategy (selection of items).
+
+-Branch and Bound (B&B): Explored the tree-search-based B&B algorithm to improve search efficiency compared to exhaustive search.
+
+-Greedy Algorithm & LP Relaxation: Compared the optimal solutions with heuristic approaches (Greedy) and Linear Programming relaxation.
+
+*Outcome: Successfully verified the optimal Knapsack strategy and conducted a cost comparison across different algorithms to analyze time complexity and accuracy.

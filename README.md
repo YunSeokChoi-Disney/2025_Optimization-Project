@@ -2,22 +2,48 @@
 
 Coursework for **Introduction to Optimization (최적화개론)**, Hanyang University.
 
-This repository collects two projects, kept side by side. Click through for the full write-up of each.
+This repository collects three projects, kept side by side. Click through for the full write-up of each.
 
 | Project | Topic | Details |
 |---------|-------|---------|
 | **Project 1** | Numerical optimization algorithms — Gradient Descent, Newton's Method, LP (Simplex), QP | [📄 docs/Project1.md](docs/Project1.md) |
+| **Project 2** | Combinatorial optimization — 0/1 Knapsack via DP, Branch & Bound, Greedy, LP relaxation | [📄 docs/Project2.md](docs/Project2.md) |
 | **Project 3** | Reinforcement learning in a 6×6 grid maze — Q-Learning, SARSA, DQN | [📄 docs/Project3.md](docs/Project3.md) |
+
+> Each project also has its own git branch (`Project-1`, `Project2`, `Project3`) holding its code and data.
 
 ---
 
-## Repository layout
+## Projects at a glance
+
+### Project 1 — Numerical Optimization Algorithms
+Implement fundamental optimization algorithms **from scratch** (no pre-built solvers): unconstrained
+optimization (Gradient Descent, Newton's Method), Linear Programming (Simplex), and Quadratic
+Programming. → [Read more](docs/Project1.md)
+
+### Project 2 — Combinatorial Optimization (Knapsack)
+Solve the **0/1 Knapsack Problem** with Dynamic Programming (exact), Branch & Bound, a Greedy
+heuristic, and LP relaxation, then compare accuracy and running time across methods (Python + MATLAB).
+→ [Read more](docs/Project2.md)
+
+### Project 3 — Reinforcement Learning in a Grid Maze
+Train an agent to find the **shortest path** through a 6×6 [MiniGrid](https://minigrid.farama.org/)
+maze with tabular RL (Q-Learning, SARSA) and deep RL (DQN with CNN, replay buffer, and target
+network). Includes flowcharts of the agent loop and the DQN training loop.
+→ [Read more](docs/Project3.md)
+
+*Project 3 team: 3조 — 최윤석, 김영민*
+
+---
+
+## Repository layout (this branch)
 
 ```
 .
 ├── README.md                     ← you are here (index)
 ├── docs/
 │   ├── Project1.md               ← Project 1 write-up
+│   ├── Project2.md               ← Project 2 write-up
 │   └── Project3.md               ← Project 3 write-up (with flowcharts)
 │
 ├── PJ1_Problem1_(4).py           ┐
@@ -37,19 +63,5 @@ This repository collects two projects, kept side by side. Click through for the 
 └── [최적화개론 Project3] 솔루션_3조_….pdf                ← written solution
 ```
 
----
-
-## Projects at a glance
-
-### Project 1 — Numerical Optimization Algorithms
-Implement fundamental optimization algorithms **from scratch** (no pre-built solvers): unconstrained
-optimization (Gradient Descent, Newton's Method), Linear Programming (Simplex), and Quadratic
-Programming. → [Read more](docs/Project1.md)
-
-### Project 3 — Reinforcement Learning in a Grid Maze
-Train an agent to find the **shortest path** through a 6×6 [MiniGrid](https://minigrid.farama.org/)
-maze with tabular RL (Q-Learning, SARSA) and deep RL (DQN with CNN, replay buffer, and target
-network). Includes flowcharts of the agent loop and the DQN training loop.
-→ [Read more](docs/Project3.md)
-
-*Project 3 team: 3조 — 최윤석, 김영민*
+> Project 2's code and data (`DP_YUNSEOK.py`, Branch & Bound, MATLAB files, etc.) live on the
+> `Project2` branch — see [docs/Project2.md](docs/Project2.md).

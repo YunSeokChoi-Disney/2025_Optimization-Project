@@ -5,14 +5,15 @@
 **Team:** 3조 — 최윤석, 김영민
 
 > Train an agent to find the **shortest path** through a 6×6 [MiniGrid](https://minigrid.farama.org/) maze
-> using both **tabular** reinforcement learning (Q-Learning, SARSA) and **deep** reinforcement learning (DQN).
+> and — the core of this project — **analyze how Q-Learning, SARSA, and DQN differ** in formulation and
+> in the policies they learn.
 
 ---
 
 ## 1. Objective
 
-Design a discrete maze environment and solve it with three different RL approaches, then compare the
-learned paths and discuss whether each is optimal.
+Design a discrete maze environment and solve it with three RL algorithms, then compare their update
+rules, the assumptions behind them, and the paths they converge to.
 
 | # | Problem | Method | Idea |
 |---|---------|--------|------|
@@ -42,10 +43,10 @@ partial RGB image for DQN.
 
 ---
 
-## 3. How the Agent Learns
+## 3. Common Ground: the RL Formulation
 
-All three methods share the same agent–environment interaction loop; only the way `Q` is stored and
-updated differs.
+All three methods model the maze as a **Markov Decision Process** and share the same agent–environment
+loop; only the way the action-value function $Q$ is *represented* and *updated* differs.
 
 ```mermaid
 flowchart LR
@@ -54,6 +55,29 @@ flowchart LR
     E -- "reward r_t" --> A
     A -. "ε-greedy:<br/>explore vs. exploit" .-> A
 ```
+
+**Return** (discounted sum of future rewards) and the **action-value function** we want to estimate:
+
+$$
+G_t = \sum_{k=0}^{\infty} \gamma^{k}\, r_{t+k+1}, \qquad
+Q^{\pi}(s,a) = \mathbb{E}_{\pi}\!\left[\, G_t \mid s_t = s,\ a_t = a \,\right]
+$$
+
+The optimal values satisfy the **Bellman optimality equation**:
+
+$$
+Q^{*}(s,a) = \mathbb{E}\!\left[\, r_{t+1} + \gamma \max_{a'} Q^{*}(s_{t+1}, a') \;\middle|\; s_t=s,\ a_t=a \,\right]
+$$
+
+**Behavior policy — ε-greedy** (shared by all three, with ε decaying each episode):
+
+$$
+a_t =
+\begin{cases}
+\arg\max_{a} Q(s_t, a) & \text{with probability } 1-\epsilon \\[4pt]
+\text{a uniformly random action} & \text{with probability } \epsilon
+\end{cases}
+$$
 
 ### Project pipeline
 
@@ -70,32 +94,92 @@ flowchart TD
 
 ---
 
-## 4. Tabular Methods (Problem 2)
+## 4. Core: Q-Learning vs SARSA vs DQN
 
-Both algorithms keep a Q-table of shape `(width, height, 4 directions, 3 actions)` and select actions
-with an **ε-greedy** policy whose ε decays each episode.
+The three algorithms differ in **one place — the TD target** — plus how $Q$ is stored. Everything else
+(the ε-greedy behavior, γ, the reward) is held equal so the comparison is clean.
 
-| | Q-Learning | SARSA |
-|---|------------|-------|
-| Type | Off-policy | On-policy |
-| TD target | `r + γ · max_a Q(s', a)` | `r + γ · Q(s', a')` |
-| Update | uses the *greedy* next action | uses the *actually chosen* next action |
-| Hyperparameters | γ = 0.99, lr = 0.1, ε-decay = 0.999, 5000 episodes | γ = 0.99, lr = 0.1, ε-decay = 0.995, 5000 episodes |
+### 4.1 Q-Learning — off-policy tabular TD control
 
-After training, the greedy policy is rolled out and the resulting **state trajectory** `(x, y, dir)` is
-printed and rendered to video to check optimality.
+Bootstraps from the **greedy** next action ($\max_a$), regardless of what the agent actually does next.
+It therefore estimates $Q^{*}$ independently of the exploratory behavior policy → **off-policy**.
+
+$$
+Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \Big[\, r_{t+1} + \gamma \max_{a} Q(s_{t+1}, a) - Q(s_t, a_t) \,\Big]
+$$
+
+### 4.2 SARSA — on-policy tabular TD control
+
+Bootstraps from the action $a_{t+1}$ **actually chosen** by the ε-greedy policy at $s_{t+1}$. Its values
+reflect the exploration it is doing → **on-policy** (the name comes from the tuple
+$(s_t, a_t, r_{t+1}, s_{t+1}, a_{t+1})$).
+
+$$
+Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \Big[\, r_{t+1} + \gamma\, Q(s_{t+1}, a_{t+1}) - Q(s_t, a_t) \,\Big],
+\qquad a_{t+1} \sim \pi_{\epsilon}(\cdot \mid s_{t+1})
+$$
+
+> **The single difference:** Q-Learning uses $\max_a Q(s_{t+1}, a)$; SARSA uses $Q(s_{t+1}, a_{t+1})$ for
+> the action it will really take. When ε → 0 the two targets coincide.
+
+### 4.3 DQN — off-policy with function approximation
+
+DQN keeps Q-Learning's greedy (off-policy) target but replaces the table with a **neural network**
+$Q(s, a; \theta)$ (a CNN reading the image). Two tricks make training with a nonlinear approximator
+stable: a **Replay Buffer** $\mathcal{D}$ (decorrelates samples) and a **Target Network** $\theta^{-}$
+(a periodically-frozen copy that keeps the bootstrap target from moving every step).
+
+TD target (computed with the frozen target network):
+
+$$
+y_t = r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a';\, \theta^{-})
+$$
+
+Loss minimized over minibatches sampled from the replay buffer, and the gradient step:
+
+$$
+L(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}}\Big[\big(\, y - Q(s, a;\, \theta)\,\big)^{2}\Big],
+\qquad
+\theta \leftarrow \theta - \eta\, \nabla_{\theta} L(\theta)
+$$
+
+The target network is synced to the online network, $\theta^{-} \leftarrow \theta$, every few episodes.
+
+### 4.4 Side-by-side comparison
+
+| Aspect | Q-Learning | SARSA | DQN |
+|--------|-----------|-------|-----|
+| Policy class | **Off-policy** | **On-policy** | **Off-policy** |
+| TD target | $r + \gamma \max_a Q(s',a)$ | $r + \gamma\, Q(s',a')$ | $r + \gamma \max_{a'} Q(s',a';\theta^{-})$ |
+| Next action in target | greedy ($\max$) | the one actually sampled | greedy ($\max$) |
+| $Q$ representation | table $(x,y,\text{dir},a)$ | table $(x,y,\text{dir},a)$ | CNN $Q(s,a;\theta)$ |
+| State input | discrete tuple | discrete tuple | preprocessed image |
+| Stability mechanism | — | — | replay buffer + target network |
+| Generalization | none (exact per state) | none (exact per state) | yes (shared weights) |
+| Learned policy tendency | optimal, can hug hazards | more **conservative** under exploration | optimal (approximate) |
+
+### 4.5 What the differences mean here
+
+- **Q-Learning vs SARSA.** The only change is the bootstrap action. Q-Learning learns the optimal
+  greedy policy directly; SARSA learns the value of the policy *including its exploration*, so it prefers
+  paths that stay safe while ε is still large. In a maze whose only penalty is a small per-step cost
+  (no "cliff"), both converge to essentially the **same shortest path**, but SARSA's intermediate values
+  are more conservative and its ε is decayed faster (0.995 vs 0.999) to settle sooner.
+- **Tabular vs DQN.** Q-Learning and SARSA store one number per `(state, action)` — exact but with no
+  generalization and no scaling to large/continuous inputs. DQN reads the raw image and *approximates*
+  $Q$, so it can generalize across similar states, at the cost of instability that the replay buffer and
+  target network are there to tame. Conceptually **DQN = Q-Learning + function approximation**.
 
 ---
 
-## 5. Deep Q-Network (Problem 3)
-
-DQN replaces the Q-table with a **CNN** that maps an image observation to Q-values for the 3 actions.
+## 5. DQN Implementation Details (Problem 3)
 
 **Key components**
 
 - **Replay Buffer** — stores `(state, action, reward, next_state, done)` transitions and samples random
   minibatches, breaking correlation between consecutive experiences.
-- **Target Network** — a periodically-synced copy of the online network used to compute stable TD targets.
+- **Target Network** — a periodically-synced copy $\theta^{-}$ of the online network used to compute the
+  TD target $y_t$, keeping it stable.
 - **Image preprocessing** — partial RGB observation → grayscale → normalized tensor.
 - **Reward shaping** — `-0.01` per step (discourages wandering), `+1.0` on reaching the goal.
 
@@ -109,29 +193,29 @@ flowchart TD
     PUSH --> SAMP{"Buffer ≥ batch?"}
     SAMP -- "no" --> SEL
     SAMP -- "yes" --> BATCH["Sample minibatch"]
-    BATCH --> LOSS["Compute TD target with<br/>Target Network<br/>loss = MSE(Q, target)"]
+    BATCH --> LOSS["Compute TD target y with<br/>Target Network θ⁻<br/>loss = MSE(Q(s,a;θ), y)"]
     LOSS --> OPT["Backprop → Adam step"]
     OPT --> DONE{"Episode done?"}
     DONE -- "no" --> SEL
     DONE -- "yes" --> DECAY["Decay ε"]
     DECAY --> SYNC{"ep % update_freq == 0?"}
-    SYNC -- "yes" --> COPY["Sync Target ← Online"]
+    SYNC -- "yes" --> COPY["Sync θ⁻ ← θ"]
     SYNC -- "no" --> NEXT["Next episode"]
     COPY --> NEXT
 ```
 
 **Hyperparameters**
 
-| Parameter | Value |
-|-----------|-------|
-| Network | Conv2d(→16→32→32) + FC(256 → 3) |
-| Optimizer | Adam, lr = 1e-4 |
-| Discount γ | 0.99 |
-| Replay buffer size | 10,000 |
-| Minibatch size | 32 |
-| Episodes | 1,000 |
-| ε | 1.0 → 0.01 (decay 0.999) |
-| Target update period | every 20 episodes |
+| | Q-Learning | SARSA | DQN |
+|---|-----------|-------|-----|
+| Discount $\gamma$ | 0.99 | 0.99 | 0.99 |
+| Learning rate $\alpha$ / $\eta$ | 0.1 | 0.1 | 1e-4 (Adam) |
+| ε schedule | 1.0, decay 0.999 | 1.0, decay 0.995 | 1.0 → 0.01, decay 0.999 |
+| Episodes | 5,000 | 5,000 | 1,000 |
+| Function approx. | — | — | Conv2d(→16→32→32) + FC(256→3) |
+| Replay buffer | — | — | 10,000 |
+| Minibatch | — | — | 32 |
+| Target update | — | — | every 20 episodes |
 
 ---
 
@@ -173,10 +257,10 @@ reward curve, and render the learned path.
   stabilizes as ε decays and the policy shifts from **exploration → exploitation**.
 - **Optimality** — the greedy trajectory after training is inspected to confirm the agent takes the
   shortest collision-free path from start to goal.
-- **Q-Learning vs. SARSA** — off-policy vs. on-policy updates lead to slightly different learned paths,
-  discussed in the solution PDF.
-- **DQN** — learns directly from image observations without a hand-built state table, at the cost of
-  more compute and hyperparameter tuning.
+- **Q-Learning vs SARSA** — identical except for the TD target; off-policy vs on-policy learning yields
+  the same optimal path in this maze but different intermediate value estimates (see §4.5).
+- **DQN** — matches the tabular optimum while learning directly from image observations, showing that
+  function approximation recovers the same policy at the cost of more compute and tuning.
 
 ---
 
